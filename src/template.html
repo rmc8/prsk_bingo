@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <title>prsk bingo</title>
+    <style type="text/css">
+        td,
+        img,
+        .free {
+            display: inline-block;
+            padding: 0;
+            height: 120px;
+            width: 120px;
+        }
+
+        .free {
+            display: table-cell;
+            text-align: center;
+            width: 120px;
+            font-size: 88px;
+            color: #fd6;
+        }
+
+        .wrapper {
+            width: 620px;
+        }
+
+        .container::-webkit-scrollbar {
+            display: none;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="wrapper">
+        <table>
+            {{data}}
+        </table>
+    </div>
+</body>
+
+</html>
