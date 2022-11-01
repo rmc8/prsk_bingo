@@ -1,6 +1,7 @@
 import os
 import random
 import pathlib
+import datetime
 
 import requests
 import pandas as pd
@@ -34,10 +35,16 @@ def web_driver(headless: bool = False, log_lv: int = 3) -> Chrome:
     )
 
 
+def epoc2dt(epoc):
+    return datetime.datetime.fromtimestamp(epoc / 1000)
+
+
 def main():
     r = requests.get(URL)
     music_list: dict = r.json()["data"]
-    df = pd.DataFrame(music_list)
+    odf = pd.DataFrame(music_list)
+    odf["pubDate"] = odf.publishedAt.map(epoc2dt)
+    df = odf[odf["pubDate"] <= datetime.datetime.now()]
     music_id_list: list = df["id"].tolist()
     try:
         driver = web_driver(headless=True)
