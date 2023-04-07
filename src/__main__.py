@@ -2,77 +2,91 @@ import os
 import random
 import pathlib
 import datetime
+from typing import List, Tuple
 
+import fire
 import requests
 import pandas as pd
 from tqdm import tqdm
 from selenium.webdriver import Chrome
 from selenium.webdriver.chrome.options import Options
-# from selenium.webdriver.common.by import By
 from webdriver_manager.chrome import ChromeDriverManager
 
-URL: str = "https://api.pjsek.ai/database/master/musics?$limit=2048&$skip=0&"
-jacket_url: str = "https://storage.sekai.best/sekai-assets/music/jacket/jacket_s_{music_num:03}_rip/jacket_s_{music_num:03}.webp"
-output_dir: str = "./bingo/"
-os.makedirs(output_dir, exist_ok=True)
-with open("./src/template.html", mode="r", encoding="utf-8") as f:
-    HTML: str = f.read()
+PJSEK_MUSIC_URL: str = (
+    "https://api.pjsek.ai/database/master/musics?$limit=2048&$skip=0&"
+)
+JACKET_URL: str = "https://storage.sekai.best/sekai-assets/music/jacket/jacket_s_{music_num:03}_rip/jacket_s_{music_num:03}.webp"
+BINGO_DIR: str = "./bingo/"
+TEMPLATE_PATH: str = "./src/template.html"
+WINDOW_SIZE: Tuple[int, int] = (628, 628)
 
 
-def web_driver(headless: bool = False, log_lv: int = 3) -> Chrome:
-    # Options
+def web_driver(headless: bool = False, log_level: int = 3) -> Chrome:
+    """Selenium WebDriverを作成する."""
     options = Options()
-    options.add_argument(f"log-level={log_lv}")
+    options.add_argument(f"log-level={log_level}")
 
-    # Headless
     if headless:
         options.add_argument("--headless")
 
-    # Return the driver
     return Chrome(
         ChromeDriverManager().install(),
         options=options,
     )
 
 
-def epoc2dt(epoc):
-    return datetime.datetime.fromtimestamp(epoc / 1000)
+def epoch_to_datetime(epoch: int) -> datetime.datetime:
+    """エポック秒を日時に変換する."""
+    return datetime.datetime.fromtimestamp(epoch / 1000)
 
 
-def main():
-    r = requests.get(URL)
-    music_list: dict = r.json()["data"]
+def create_bingo_card(
+    driver: Chrome, music_id_list: List[int], html_path: pathlib.Path
+) -> None:
+    """ビンゴカードを生成する."""
+    music_list = random.sample(music_id_list, 24)
+    data_list: list = []
+    cnt: int = 0
+    while music_list:
+        if cnt != 12:
+            music_num = music_list.pop()
+            data = f'<td><img src="{JACKET_URL.format(music_num=music_num)}"></td>'
+            data_list.append(data)
+        else:
+            data_list.append('<td><div class="free">★</div></td>')
+        cnt += 1
+    with open(TEMPLATE_PATH, mode="r", encoding="utf-8") as f:
+        html = f.read().replace("{{data}}", "".join(data_list))
+    with open(html_path, mode="w", encoding="utf-8") as f:
+        print(html, file=f)
+    driver.get(f"file:///{html_path}")
+
+
+def save_bingo_card(driver: Chrome, output_path: str) -> None:
+    """ビンゴカードをスクリーンショットとして保存する."""
+    p = pathlib.Path(output_path)
+    driver.save_screenshot(str(p.resolve()))
+
+
+def main(n: int = 20) -> None:
+    r = requests.get(PJSEK_MUSIC_URL)
+    music_list = r.json()["data"]
     odf = pd.DataFrame(music_list)
-    odf["pubDate"] = odf.publishedAt.map(epoc2dt)
+    odf["pubDate"] = odf.publishedAt.map(epoch_to_datetime)
     df = odf[odf["pubDate"] <= datetime.datetime.now()]
-    music_id_list: list = df["id"].tolist()
+    music_id_list = df["id"].tolist()
+    os.makedirs(BINGO_DIR, exist_ok=True)
     try:
-        driver = web_driver(headless=True)
-        driver.set_window_size(628, 628)
-        for i in tqdm(range(1, 21)):
-            music_list: list = random.sample(music_id_list, 24)
-            data_list: list = []
-            cnt: int = 0
-            while music_list:
-                if cnt != 12:
-                    music_num = music_list.pop()
-                    data: str = f'<td><img src="{jacket_url.format(music_num=music_num)}"></td>'
-                    data_list.append(data)
-                else:
-                    data_list.append('<td><div class="free">★</div></td>')
-                cnt += 1
-            html = HTML.replace("{{data}}", "".join(data_list))
-            p = pathlib.Path("./tmp.html")
-            html_path = p.resolve()
-            with open(html_path, mode="w", encoding="utf-8") as f:
-                print(html, file=f)
-            driver.get(f"file:///{html_path}")
-            # elm = driver.find_element(By.CLASS_NAME, "wrapper")
-            p = pathlib.Path(f"./bingo/bingo_{i:02}.png")
-            driver.save_screenshot(str(p.resolve()))
+        driver = web_driver(headless=False)
+        driver.set_window_size(*WINDOW_SIZE)
+        html_path = pathlib.Path("./tmp.html").resolve()
+        for i in tqdm(range(1, n + 1)):
+            create_bingo_card(driver, music_id_list, html_path)
+            save_bingo_card(driver, f"{BINGO_DIR}bingo_{i:02}.png")
+        os.remove(html_path)
     finally:
         driver.quit()
 
 
 if __name__ == "__main__":
-    main()
+    fire.Fire(main)
