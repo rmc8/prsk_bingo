@@ -18,7 +18,7 @@ PJSEK_MUSIC_URL: str = (
 JACKET_URL: str = "https://storage.sekai.best/sekai-assets/music/jacket/jacket_s_{music_num:03}_rip/jacket_s_{music_num:03}.webp"
 BINGO_DIR: str = "./bingo/"
 TEMPLATE_PATH: str = "./src/template.html"
-WINDOW_SIZE: Tuple[int, int] = (628, 628)
+WINDOW_SIZE: Tuple[int, int] = (644, 761)
 
 
 def web_driver(headless: bool = False, log_level: int = 3) -> Chrome:
@@ -82,7 +82,7 @@ def main(n: int = 20) -> None:
         html_path = pathlib.Path("./tmp.html").resolve()
         for i in tqdm(range(1, n + 1)):
             create_bingo_card(driver, music_id_list, html_path)
-            save_bingo_card(driver, f"{BINGO_DIR}bingo_{i:02}.png")
+            save_bingo_card(driver, f"{BINGO_DIR}bingo_{i:04}.png")
         os.remove(html_path)
     finally:
         driver.quit()
