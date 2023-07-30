@@ -10,6 +10,7 @@ import pandas as pd
 from tqdm import tqdm
 from selenium.webdriver import Chrome
 from selenium.webdriver.chrome.options import Options
+from selenium.webdriver.chrome.service import Service
 from webdriver_manager.chrome import ChromeDriverManager
 
 PJSEK_MUSIC_URL: str = (
@@ -30,9 +31,10 @@ def web_driver(headless: bool = False, log_level: int = 3) -> Chrome:
         options.add_argument("--headless")
 
     return Chrome(
-        ChromeDriverManager().install(),
+        service=Service(ChromeDriverManager().install()),
         options=options,
     )
+
 
 
 def epoch_to_datetime(epoch: int) -> datetime.datetime:
@@ -76,8 +78,8 @@ def main(n: int = 20) -> None:
     df = odf[odf["pubDate"] <= datetime.datetime.now()]
     music_id_list = df["id"].tolist()
     os.makedirs(BINGO_DIR, exist_ok=True)
+    driver = web_driver(headless=False)
     try:
-        driver = web_driver(headless=False)
         driver.set_window_size(*WINDOW_SIZE)
         html_path = pathlib.Path("./tmp.html").resolve()
         for i in tqdm(range(1, n + 1)):

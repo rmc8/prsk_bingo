@@ -2,3 +2,5 @@ requests
 webdriber_manager
 selenium
 pandas
+fire
+tqdm
