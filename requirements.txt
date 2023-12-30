@@ -1,5 +1,5 @@
 requests
-webdriber_manager
+webdriver_manager
 selenium
 pandas
 fire
